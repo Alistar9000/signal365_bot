@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root{
+  --app-red-bg-color:#E82A3C;
+  --app-accent-text-color:#00b894;
+  --app-accent-hover-color:rgb(0, 184, 148 , .8);
+  --app-bg-color:#fcfdfd;
+  --app-section-bg-color:var(--app-bg-color);
+  --app-text-color:#091e42;
+  --app-link-color:#1677FF;
+  --app-secondary-bg-color:#F4F5F7;
+  --app-subtitle-text-color:#7A869A;
+  
+}
+
+@font-face {
+  font-family: shabnam;
+  font-display: swap;
+  src: url("/fonts/Shabnam-FD.ttf");
+}
+
+body {
+  margin: 0;
+  direction: rtl;
+  font-family: "shabnam";
+  box-sizing: border-box;
+  color: var(--app-text-color);
+}
+*::-webkit-scrollbar{
+  display: none;
+  width: 0px;
+
+}
+
+
+
