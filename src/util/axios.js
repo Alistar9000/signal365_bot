@@ -1,7 +1,5 @@
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
 import { router } from "./router";
-import { LockIcon } from "lucide-react";
 
 export const api = axios.create({
   baseURL: "/api/mini-app",
@@ -14,7 +12,7 @@ export const api = axios.create({
   
  api.interceptors.request.use((config) => {
   // if(window.Bale.WebApp)    
-   config.headers['Authorization'] = window.Telegram.WebApp.initData
+   config.headers['Authorization'] = window.Telegram?.WebApp?.initData ?? ""
       // config.headers['Authorization'] = localStorage.getItem('initData1')
       return config;
     });

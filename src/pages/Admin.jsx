@@ -1,8 +1,77 @@
 import { useQuery } from "@tanstack/react-query";
+import {
+  CalendarDays,
+  Crown,
+  Search,
+  Settings2,
+  ShieldPlus,
+  ShieldMinus,
+  SlidersHorizontal,
+  UserMinus,
+  UserPlus,
+  Users,
+} from "lucide-react";
+import { Link } from "react-router-dom";
 import Loading from "../components/Loading";
 import { api } from "../util/axios";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { toPersianDigits } from "../util/format";
+
+const items = [
+  {
+    title: "جستجوی کاربر",
+    url: "/mini-app/admin/check-user",
+    icon: <Search size={19} />,
+    tone: "bg-sky-50 text-sky-600",
+  },
+  {
+    title: "افزودن کاربر VIP",
+    url: "/mini-app/admin/update-vip?type=add",
+    icon: <UserPlus size={19} />,
+    tone: "bg-emerald-50 text-emerald-600",
+  },
+  {
+    title: "حذف کاربر VIP",
+    url: "/mini-app/admin/update-vip?type=delete",
+    icon: <UserMinus size={19} />,
+    tone: "bg-rose-50 text-rose-600",
+  },
+  {
+    title: "افزودن ادمین",
+    url: "/mini-app/admin/update-admin?type=add",
+    icon: <ShieldPlus size={19} />,
+    tone: "bg-indigo-50 text-indigo-600",
+  },
+  {
+    title: "حذف ادمین",
+    url: "/mini-app/admin/update-admin?type=delete",
+    icon: <ShieldMinus size={19} />,
+    tone: "bg-rose-50 text-rose-600",
+  },
+  {
+    title: "افزودن روز به همه",
+    url: "/mini-app/admin/update-days?type=all",
+    icon: <CalendarDays size={19} />,
+    tone: "bg-amber-50 text-amber-600",
+  },
+  {
+    title: "افزودن روز به کاربر",
+    url: "/mini-app/admin/update-days?type=vip",
+    icon: <CalendarDays size={19} />,
+    tone: "bg-violet-50 text-violet-600",
+  },
+  {
+    title: "آستانه سیگنال",
+    url: "/mini-app/admin/update-range",
+    icon: <SlidersHorizontal size={19} />,
+    tone: "bg-cyan-50 text-cyan-600",
+  },
+  {
+    title: "ویرایش پلن ها",
+    url: "/mini-app/admin/update-plans",
+    icon: <Settings2 size={19} />,
+    tone: "bg-slate-100 text-slate-600",
+  },
+];
 
 const Admin = () => {
   const { data, isLoading } = useQuery({
@@ -10,78 +79,57 @@ const Admin = () => {
     queryFn: () => api.get("/admin/users"),
   });
 
-  const items = [
-    {
-      title: "جتسجوی کاربر",
-      url: "/mini-app/admin/check-user",
-    },
-    {
-      title: "افزودن کاربر VIP",
-      url: "/mini-app/admin/update-vip?type=add",
-    },
-    {
-      title: "حذف کاربر VIP",
-      url: "/mini-app/admin/update-vip?type=delete",
-    },
-    { title: "افزودن admin", url: "/mini-app/admin/update-admin?type=add" },
-    { title: "حذف admin", url: "/mini-app/admin/update-admin?type=delete" },
-    {
-      title: "افزودن روز به تمام کاربران",
-      url: "/mini-app/admin/update-days?type=all",
-    },
-    {
-      title: "افزودن روز به کاربر خاص",
-      url: "/mini-app/admin/update-days?type=vip",
-    },
-    { title: "تغییر آستانه سیگنال", url: "/mini-app/admin/update-range" },
-    { title: "تغییر مبلغ پلن ها", url: "/mini-app/admin/update-plans" },
-
-    // {
-    //   title: "ارسال پیام به VIP",
-    //   url: "/mini-app/admin/send-message?type=vip",
-    // },
-    // {
-    //   title: "ارسال پیام به همه",
-    //   url: "/mini-app/admin/send-message?type=all",
-    // },
-  ];
   const users = data?.data?.data;
-
-  const handleClick = async (api) => {
-    const response = await api.get(`/admin/${api}`);
-    const result = response.data.data;
-    if (result.success) setSuccess(true);
-    else setSuccess(false);
-  };
 
   if (isLoading) return <Loading />;
 
   return (
-    <div className="w-full h-full relative gap-5 flex flex-col ">
-      <div className="flex w-full  text-xs items-center justify-between">
-        <div className="flex items-center gap-2">
-          <p>کاربران VIP : </p>
-          <span className="text-sm text-[var(--app-accent-text-color)]">
-            {users?.vip}
+    <div className="flex flex-col gap-5 animate-fade-in">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="card flex items-center gap-3 p-4">
+          <span className="icon-tile bg-amber-50 text-amber-600">
+            <Crown size={19} />
           </span>
+          <div>
+            <p className="text-[10px] text-muted">کاربران VIP</p>
+            <p className="mt-0.5 text-lg font-extrabold text-ink">
+              {toPersianDigits(users?.vip ?? "—")}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <p>کل کاربران : </p>
-          <span className="text-sm text-[var(--app-accent-text-color)]">
-            {users?.all}
+        <div className="card flex items-center gap-3 p-4">
+          <span className="icon-tile bg-brand-50 text-brand-600">
+            <Users size={19} />
           </span>
+          <div>
+            <p className="text-[10px] text-muted">کل کاربران</p>
+            <p className="mt-0.5 text-lg font-extrabold text-ink">
+              {toPersianDigits(users?.all ?? "—")}
+            </p>
+          </div>
         </div>
       </div>
-      <div className="mt-5 gap-4  grid grid-cols-3 sm:grid-cols-4">
-        {items.map((item, index) => (
-          <Link
-            to={item.url}
-            className="cursor-pointer text-[var(--app-text-color)] border border-[var(--app-accent-text-color)] rounded-xl min-h-20  flex items-center justify-center bg-white text-center p-4 hover:bg-slate-200 text-sm"
-          >
-            {item.title}
-          </Link>
-        ))}
-      </div>
+
+      <section>
+        <h2 className="section-title">
+          <span className="h-5 w-1 rounded-full bg-brand-500" />
+          ابزارهای مدیریت
+        </h2>
+        <div className="grid grid-cols-2 gap-3">
+          {items.map((item) => (
+            <Link
+              key={item.url}
+              to={item.url}
+              className="card flex min-h-[104px] flex-col justify-between gap-3 p-3.5 transition hover:-translate-y-0.5 hover:shadow-float active:scale-[.98]"
+            >
+              <span className={`icon-tile ${item.tone}`}>{item.icon}</span>
+              <span className="text-[12px] font-bold leading-4 text-ink">
+                {item.title}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
     </div>
   );
 };

@@ -1,65 +1,76 @@
 import { useState } from "react";
+import { Search } from "lucide-react";
 import { api } from "../../util/axios";
-import Loading from "../Loading";
-import { CheckCircle, X, XCircle } from "lucide-react";
+import AdminActionButton from "./AdminActionButton";
+import AdminResultModal from "./AdminResultModal";
+import { useAdminAction } from "../../hooks/useAdminAction";
+import { toPersianDigits } from "../../util/format";
 
 export default function CheckUser() {
-  // return <div className=""></div>
   const [input, setInput] = useState("");
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
- 
-  const handleClick = async () => {
-    setResult(null);
-    setLoading(true);
-     
-    const response = await api.post(`/admin/check-user?id=${input}`);
-    setResult(response?.data?.data);
-  
-      setTimeout(() => {
-      setLoading(false);
-    }, 2000);
-  };
+  const { loading, result, run, clearResult } = useAdminAction();
+
+  const handleClick = () =>
+    run(() => api.post(`/admin/check-user?id=${input}`), {
+      format: (response) => {
+        const user = response?.data?.data;
+        if (!user) {
+          return {
+            success: false,
+            title: "کاربر موجود نمی باشد",
+            message: "چت آیدی وارد شده یافت نشد.",
+          };
+        }
+
+        return {
+          success: true,
+          title: "اطلاعات کاربر",
+          details: [
+            ["چت آیدی", toPersianDigits(user.chat_id)],
+            ["نام", user.name],
+            ["نام کاربری", user.username],
+            ["تعداد روز باقیمانده", toPersianDigits(user.remaining_days)],
+            ["تعداد دفعات خریداری", toPersianDigits(user.purchase_count)],
+            ["VIP", user.is_vip ? "بله" : "خیر"],
+          ],
+        };
+      },
+    });
 
   return (
-    <div className="w-full mt-5 flex flex-col gap-10">
-      {loading && <Loading />}
-      <p className="font-bold">
-     جستجوی کاربر
-      </p>
-      <div className="flex  flex-col gap-3 px-4">
-       
-          <div className="flex flex-col w-full text-sm  gap-2">
-            <p>چت آی دی را وارد کنید</p>
+    <div className="animate-fade-in">
+      <div className="card p-5">
+        <h2 className="section-title">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-50 text-sky-600">
+            <Search size={15} />
+          </span>
+          جستجوی کاربر
+        </h2>
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="field-label" htmlFor="check-user-id">
+              چت آی دی را وارد کنید
+            </label>
             <input
+              id="check-user-id"
+              dir="ltr"
+              value={input}
               onChange={(e) => setInput(e.target.value)}
-              className="rounded-md outline-none p-2 bg-white border w-full"
-              type="text"
-              name=""
-              id=""
+              placeholder="۱۲۳۴۵۶۷۸۹"
             />
           </div>
-        <button
-          onClick={handleClick}
-          className={`rounded-md bg-[var(--app-accent-text-color)] hover:bg-[var(--app-accent-hover-color)]  text-white px-6 py-2 mt-5 `}
-        >
-          جستجو
-        </button>
-           {
-            result ?
-             <ul className="flex flex-col w-full mt-2 text-sm list-none gap-2">
-              <li>چت آیدی: <span className="mx-1 text-[var(--app-accent-text-color)] font-bold">{result?.chat_id}</span></li>
-              <li>نام: <span className="mx-1 text-[var(--app-accent-text-color)] font-bold">{result?.name}</span></li>
-              <li>نام کاربری:<span className="mx-1 text-[var(--app-accent-text-color)] font-bold">{result?.username}</span></li>
-              <li className="flex items-center gap-2">VIP: {result?.is_vip ? <CheckCircle size={15} className="text-[var(--app-accent-text-color)]" /> : <XCircle size={15} className="text-red-600" />}</li>
-              <li>تعداد روز باقیمانده:<span className="mx-1 text-[var(--app-accent-text-color)] font-bold">{result?.remaining_days}</span></li>
-              <li>تعداد دفعات خریداری:<span className="mx-1 text-[var(--app-accent-text-color)] font-bold">{result?.purchase_count}</span></li>
-            </ul>
-            :
-           <p className="text-red-500 font-bold">کاربر موجود نمی باشد</p>
-            }
-        
+          <AdminActionButton
+            loading={loading}
+            icon={Search}
+            loadingLabel="در حال جستجو..."
+            onClick={handleClick}
+          >
+            جستجو
+          </AdminActionButton>
+        </div>
       </div>
+
+      <AdminResultModal result={result} onClose={clearResult} />
     </div>
   );
 }

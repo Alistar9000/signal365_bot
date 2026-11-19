@@ -1,9 +1,13 @@
 import { Outlet } from "react-router-dom";
+import PageHeader from "../components/PageHeader";
 
 function AdminLayout() {
   return (
-    <div className="w-full flex flex-col gap-5">
-      <p>پنل مدیریت</p>
+    <div className="animate-fade-in">
+      <PageHeader
+        title="پنل مدیریت"
+        subtitle="مدیریت کاربران، اشتراک ها و تنظیمات ربات"
+      />
       <Outlet />
     </div>
   );

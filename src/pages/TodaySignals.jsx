@@ -1,98 +1,105 @@
 import { useQuery } from "@tanstack/react-query";
+import { Inbox, Timer, TrendingDown, TrendingUp } from "lucide-react";
+import PageHeader from "../components/PageHeader";
 import { api } from "../util/axios";
-import { Timer } from "lucide-react";
-import { Link } from "react-router-dom";
 import Loading from "../components/Loading";
 import { MiniAppContext } from "../components/AppContext";
 import NotVipMessage from "../components/admin/NotVipMessage";
+import { toPersianDigits } from "../util/format";
 
 const TodaySignals = () => {
-  const { userData,isLoading : loading } = MiniAppContext();
+  const { userData, isLoading: loading } = MiniAppContext();
   const { data, isLoading } = useQuery({
     queryKey: ["today-signals"],
     queryFn: () => api.get("/today-signals"),
-    enabled:!loading,
+    enabled: !loading,
   });
 
   const signals = data?.data?.data || [];
+  const isVip = Boolean(userData?.is_vip);
+
   if (loading || isLoading) return <Loading />;
 
   return (
-    <div className="h-full flex flex-col w-full">
-      <div className="w-full flex justify-between items-center">
-        <p className="font-bold">سیگنال های امروز</p>
-        <Link
-          to={"/mini-app/guide"}
-          className="text-xs px-2 py-1 border border-yellow-200 rounded-md bg-yellow-100 text-[var(--app-accent-text-color)]"
-        >
-          راهنما
-        </Link>
-      </div>
+    <div className="animate-fade-in">
+      <PageHeader
+        title="سیگنال های امروز"
+        subtitle="سیگنال های خرید و فروش صادر شده در معاملات امروز"
+      />
+
       {signals.length === 0 ? (
-        <div className="w-full h-full mt-10 text-center">
-          <p className="border border-yellow-200 bg-yellow-100 p-2 rounded-md">
+        <div className="empty-state">
+          <Inbox size={26} className="text-slate-300" />
+          <p className="text-xs font-semibold text-ink">
             در حال حاضر سیگنالی وجود ندارد
           </p>
+          <p className="text-[11px] text-muted">با شروع معاملات، سیگنال ها نمایش داده می شوند.</p>
         </div>
       ) : (
-        <>
-          <div className="overflow-auto mt-10 relative flex-1">
-            {!userData?.is_vip && (
-              <div className="text-xs mb-5">
-                <NotVipMessage text={"مشاهده نام نمادها"} />
-              </div>
-            )}
-            <table className="w-full  text-xs">
-              <thead>
-                <tr className="*:sticky *:py-1 *:text-center *:bg-[var(--app-bg-color)] *:border-b  *:z-0 *:top-0">
-                  <th>نماد</th>
-                  <th>سیگنال</th>
-                  <th>
-                    <span className="flex items-center gap-1 w-full justify-center">
-                      زمان
-                      <Timer size={15} />
+        <div className="flex flex-col gap-2.5">
+          {!isVip && (
+            <div className="mb-1">
+              <NotVipMessage text="مشاهده نام نمادها" />
+            </div>
+          )}
+
+          {signals.map((signal, index) => {
+            const isBuy = signal?.type === "buy";
+            return (
+              <div
+                key={index}
+                className="card flex animate-fade-up items-center gap-3 p-3.5"
+                style={{ animationDelay: `${Math.min(index, 8) * 35}ms` }}
+              >
+                <span
+                  className={`icon-tile ring-1 ${
+                    isBuy
+                      ? "bg-emerald-50 text-emerald-600 ring-emerald-100"
+                      : "bg-rose-50 text-rose-600 ring-rose-100"
+                  }`}
+                >
+                  {isBuy ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
+                </span>
+
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-bold text-ink">
+                    {isVip ? signal?.name ?? "نماد" : "نماد"}
+                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    <span
+                      className={`chip ${
+                        isBuy
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-rose-50 text-rose-700"
+                      }`}
+                    >
+                      {isBuy ? "خرید" : "فروش"}
                     </span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {signals
-                  ?.map((signal) => (
-                    <tr className="border-b last:border-b-0 *:p-2 text-center">
-                      <td
-                        className={`font-bold ${signal?.type === "buy" ? "text-[var(--app-accent-text-color)]" : "text-red-500"}`}
-                      >
-                        {userData?.is_vip ? (
-                          <>
-                            <p>{signal?.name}</p>
-                            <p
-                              className={`mt-1 font-normal ${signal?.type === "buy" ? "border-[var(--app-accent-text-color)]" : "border-red-500"} text-[.6rem] border rounded-xl`}
-                            >
-                              {signal?.source}
-                            </p>
-                          </>
-                        ) : (
-                          <p>نماد</p>
-                        )}
-                      </td>
-                      <td className="place-items-center">
-                        <div
-                          className={` rounded-lg px-2 w-16 py-1 ${signal?.type === "buy" ? "bg-[var(--app-accent-text-color)]" : "bg-red-500"} text-white border`}
-                        >
-                          {signal?.type === "buy" ? "خرید" : "فروش"}
-                        </div>
-                      </td>
-                      <td
-                        className={`text-sm ${signal?.type === "buy" ? "text-[var(--app-accent-text-color)]" : "text-red-500"}`}
-                      >
-                        {userData?.is_vip ? signal?.time1 : "-"}
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-        </>
+                    {isVip && signal?.source && (
+                      <span className="chip bg-slate-100 text-slate-500">
+                        {signal.source}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="shrink-0 text-left">
+                  <p className="flex items-center justify-end gap-1 text-[10px] text-muted">
+                    <Timer size={11} /> زمان
+                  </p>
+                  <p
+                    dir="ltr"
+                    className={`mt-0.5 font-sans text-xs font-bold ${
+                      isBuy ? "text-emerald-600" : "text-rose-600"
+                    }`}
+                  >
+                    {toPersianDigits(isVip ? signal?.time1 ?? "-" : "-")}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );

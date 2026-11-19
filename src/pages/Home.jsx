@@ -1,112 +1,165 @@
 import {
+  ArrowLeft,
+  ArrowUpLeft,
   Bell,
   ChartBar,
+  Crown,
   HelpCircle,
-  Phone,
+  MessageCircle,
   Search,
   Settings,
-  StarIcon,
+  Sparkles,
   TrendingUp,
 } from "lucide-react";
-
 import MenuItem from "../components/MenuItem";
 import { MiniAppContext } from "../components/AppContext";
+import { toPersianDigits } from "../util/format";
 import Loading from "../components/Loading";
-import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 const menuItems = [
   {
-    id: 1,
-    title: "خرید / تمدید سرویس VIP",
-    icon: <StarIcon />,
-    to: "/mini-app/buy-service",
-    desc: "ارائه سیگنال های بورس ایران شامل سهام و صندوق های مختلف",
-  },
-  {
     id: 2,
     title: "سهام برتر",
-    icon: <ChartBar />,
+    icon: <ChartBar size={20} />,
     to: "/mini-app/top-100",
-    desc: "سهامی که بهترین سابقه بازدهی توسط ربات را دارند.",
+    desc: "سهامی که بهترین بازدهی را از ربات ثبت کرده اند.",
+    tone: "emerald",
   },
   {
     id: 3,
     title: "لیست هشدار",
-    icon: <Bell />,
+    icon: <Bell size={20} />,
     to: "/mini-app/alarms",
-    desc: "ذخیره سهام دلخواه برای سیگنال خرید و فروش",
+    desc: "ذخیره سهام دلخواه برای سیگنال خرید و فروش.",
+    tone: "rose",
   },
   {
     id: 4,
     title: "سیگنال های امروز",
-    icon: <TrendingUp />,
+    icon: <TrendingUp size={20} />,
     to: "/mini-app/today-signals",
-    desc: "سیگنال هایی که در تایم روزانه معاملات بازار ارائه می شوند.",
+    desc: "سیگنال های لحظه ای معاملات بازار امروز.",
+    tone: "amber",
   },
   {
     id: 5,
     title: "بررسی سابقه سهم",
-    icon: <Search />,
+    icon: <Search size={20} />,
     to: "/mini-app/check-history",
-    desc: "بررسی عملکرد و میزان موفقیت ربات روی هر سهم دلخواه.",
+    desc: "ببینید ربات روی هر سهم چقدر موفق بوده است.",
+    tone: "sky",
   },
-
   {
     id: 8,
     title: "راهنمای ربات",
-    icon: <HelpCircle />,
+    icon: <HelpCircle size={20} />,
     to: "/mini-app/guide",
-    desc: "راهنمای کامل از معرفی بخش های مختلف ربات.",
+    desc: "آشنایی کامل با تمام بخش های ربات.",
+    tone: "violet",
   },
-
   {
     id: 9,
     title: "مدیریت",
-    icon: <Settings />,
+    icon: <Settings size={20} />,
     to: "/mini-app/admin",
-    desc: "تنظیمات کاربران ویژه.",
+    desc: "پنل مدیریت و تنظیمات کاربران ویژه.",
+    tone: "slate",
   },
 ];
 
+const SUPPORT_URL = "https://t.me/signal365_support";
+
 export default function Home() {
-  const { userData ,isLoading } = MiniAppContext();
-  const [flag,setFlag] = useState(false)
+  const { userData, isLoading } = MiniAppContext();
 
   if (isLoading) return <Loading />;
 
-  return (
-    <div className="flex flex-col h-full  overflow-auto  gap-2">
-      <div className="flex flex-col gap-2">
-        {menuItems.map((item, index) => {
-          if (item.id === 9 && userData?.role === "admin")
-            return <MenuItem key={index} {...item} />;
-          if (item.id !== 9) return <MenuItem key={index} {...item} />;
-        })}
+  const openSupport = () => {
+    if (window.Telegram?.WebApp?.openLink) {
+      window.Telegram.WebApp.openLink(SUPPORT_URL);
+    } else {
+      window.open(SUPPORT_URL, "_blank", "noopener,noreferrer");
+    }
+  };
 
-        <div
-          style={{ lineHeight: 1 }}
-          onClick={() =>
-            //  window.Bale.WebApp.openLink("https://ble.ir/signal365_support")
-             window.Telegram.WebApp.openLink("https://t.me/signal365_support")
-          }
-          className=" h-20 items-center cursor-pointer hover:bg-neutral-100/40  overflow-hidden w-full border gap-2  rounded-xl p-2  flex"
-        >
-          <div className="text-lg">
-            <div className="p-3 flex rounded-xl text-[var(--app-subtitle-text-color)] bg-[var(--app-secondary-bg-color)] items-center justify-center">
-              <Phone />
-            </div>
+  return (
+    <div className="flex flex-col gap-5 animate-fade-in">
+      {/* VIP hero */}
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-bl from-slate-900 via-brand-900 to-brand-800 p-5 text-white shadow-float">
+        <div className="pointer-events-none absolute -left-12 -top-16 h-44 w-44 rounded-full bg-brand-400/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-16 -right-10 h-40 w-40 rounded-full bg-emerald-300/20 blur-3xl" />
+
+        <div className="relative flex items-start gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-amber-300 ring-1 ring-white/15">
+            <Crown size={22} />
           </div>
-          <div className="w-full flex flex-col">
-            <p className="text-sm font-bold text-[var(--app-accent-text-color)]">
-              ارتباط با ما
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-semibold text-white/60">
+              سرویس اشتراک سیگنال هوشمند
             </p>
-            <p className="text-xs text-[var(--app-subtitle-text-color)]">
-              پشتیبانی سیگنال هوشمند 
-              <span className="text-[var(--app-link-color)]">@signal365_support</span>
+            <h2 className="mt-1 text-base font-extrabold leading-6">
+              {userData?.is_vip
+                ? "شما عضو VIP هستید 🎉"
+                : "بورس را حرفه ای دنبال کنید"}
+            </h2>
+            <p className="mt-1 text-[11px] leading-5 text-white/70">
+              {userData?.is_vip
+                ? `${toPersianDigits(userData?.remaining_day ?? 0)} روز از اشتراک شما باقی مانده است.`
+                : "سیگنال های خرید و فروش، سهام برتر و هشدارهای لحظه ای."}
             </p>
           </div>
         </div>
-      </div>
+
+        <Link
+          to="/mini-app/buy-service"
+          className="relative mt-4 flex items-center justify-between rounded-xl bg-white/10 px-4 py-3 text-xs font-bold ring-1 ring-white/15 transition hover:bg-white/20"
+        >
+          <span className="flex items-center gap-2">
+            <Sparkles size={14} className="text-amber-300" />
+            {userData?.is_vip ? "تمدید یا ارتقای اشتراک" : "مشاهده پلن های VIP"}
+          </span>
+          <ArrowLeft size={16} />
+        </Link>
+      </section>
+
+      {/* Quick access */}
+      <section>
+        <div className="section-title">
+          <span className="h-5 w-1 rounded-full bg-brand-500" />
+          دسترسی سریع
+          <span className="mr-auto text-[10px] font-normal text-muted">
+            همه خدمات در یک جا
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          {menuItems.map((item) => {
+            if (item.id === 9 && userData?.role !== "admin") return null;
+            return <MenuItem key={item.id} {...item} />;
+          })}
+        </div>
+      </section>
+
+      {/* Support */}
+      <button
+        type="button"
+        onClick={openSupport}
+        className="card flex w-full items-center gap-3 p-3.5 text-right transition hover:shadow-float active:scale-[.99]"
+      >
+        <span className="icon-tile bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100">
+          <MessageCircle size={20} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[13px] font-bold text-ink">
+            ارتباط با پشتیبانی
+          </span>
+          <span dir="ltr" className="mt-0.5 block text-[11px] text-brand-700">
+            @signal365_support
+          </span>
+        </span>
+        <ArrowUpLeft size={16} className="text-slate-300" />
+      </button>
     </div>
   );
 }

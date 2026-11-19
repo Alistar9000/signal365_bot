@@ -44,6 +44,7 @@ Route::prefix('/mini-app')->group(function () {
             Route::post('/add-days/all',[MiniAppController::class, 'addDaysAll']);
             Route::post('/add-days/vip',[MiniAppController::class, 'addDaysVip']);
             Route::post('/plans',[MiniAppController::class, 'updatePlans']);
+            Route::post('/plans/add',[MiniAppController::class, 'addPlan']);
             Route::post('/send-message',[MiniAppController::class, 'sendMessage']);
             // Route::post('/send-vip',[MiniAppController::class, 'sendMessageToVip']);
          });

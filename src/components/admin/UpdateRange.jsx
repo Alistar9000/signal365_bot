@@ -1,60 +1,88 @@
 import { useState } from "react";
+import { SlidersHorizontal } from "lucide-react";
 import { api } from "../../util/axios";
 import { useQuery } from "@tanstack/react-query";
+import AdminActionButton from "./AdminActionButton";
+import AdminResultModal from "./AdminResultModal";
+import { useAdminAction } from "../../hooks/useAdminAction";
+import { toPersianDigits } from "../../util/format";
 
 export default function UpdateRange() {
   const [input, setInput] = useState("");
-  const [result, setResult] = useState(null);
+  const { loading, result, run, clearResult } = useAdminAction();
 
-  const { data, isLoading } = useQuery({
+  const { data } = useQuery({
     queryKey: ["signal-range", result],
     queryFn: () => api.get("/admin/range"),
   });
   const range = data?.data?.data || "";
 
-  const handleClick = async () => {
-    setResult(null);
-    const response = await api.post(`/admin/range`, {
-      range: parseFloat(input),
-    });
-    const success = response?.data?.success;
-    setTimeout(() => {
-      if (success) {
-        setResult(true);
-        setInput("");
-      } else setResult(false);
-    }, 2000);
-  };
+  const handleClick = () =>
+    run(
+      () =>
+        api.post(`/admin/range`, {
+          range: parseFloat(input),
+        }),
+      {
+        format: (response) => {
+          const success = Boolean(response?.data?.success);
+          return {
+            success,
+            title: success
+              ? "با موفقیت آپدیت شد"
+              : "آپدیت ناموفق بود",
+            message: response?.data?.message,
+          };
+        },
+        onSuccess: () => setInput(""),
+      },
+    );
 
   return (
-    <div className="w-full mt-5 flex flex-col gap-10">
-      <p>تغییر آستانه سیگنال</p>
-      <div className="flex items-center flex-col gap-5 px-4">
-        <div className="flex flex-col w-full text-sm  gap-2">
-          <p>آستانه سیگنال را وارد کنید ( {range} )</p>
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            className="rounded-md outline-none p-2 bg-white border w-full"
-            type="text"
-            name=""
-            id=""
-          />
+    <div className="animate-fade-in">
+      <div className="card p-5">
+        <h2 className="section-title">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-50 text-cyan-600">
+            <SlidersHorizontal size={15} />
+          </span>
+          تغییر آستانه سیگنال
+        </h2>
+
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5">
+            <span className="text-[11px] text-muted">آستانه فعلی</span>
+            <span dir="ltr" className="font-sans text-sm font-extrabold text-brand-700">
+              {toPersianDigits(range || "—")}
+            </span>
+          </div>
+
+          <div>
+            <label className="field-label" htmlFor="signal-range">
+              آستانه جدید
+            </label>
+            <input
+              id="signal-range"
+              dir="ltr"
+              type="number"
+              step="0.1"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="۰.۰"
+            />
+          </div>
+
+          <AdminActionButton
+            loading={loading}
+            icon={SlidersHorizontal}
+            loadingLabel="در حال ثبت..."
+            onClick={handleClick}
+          >
+            ثبت
+          </AdminActionButton>
         </div>
-        <button
-          onClick={handleClick}
-          className={`rounded-md bg-[var(--app-accent-text-color)] hover:bg-[var(--app-accent-hover-color)]  text-white px-6 py-2 mt-5 `}
-        >
-          ثبت
-        </button>
-        {result ? (
-          <p className="text-[var(--app-accent-text-color)]">
-            با موفقیت آپدیت شد
-          </p>
-        ) : (
-          result == false && <p className="text-red-500">آپدیت ناموفق!</p>
-        )}
       </div>
+
+      <AdminResultModal result={result} onClose={clearResult} />
     </div>
   );
 }

@@ -1,76 +1,71 @@
-import { createContext, useContext, useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query'; // فرض بر این است که از react-query استفاده می‌کنی
-import { api } from '../util/axios';
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "../util/axios";
+import UpgradeSignalsModal from "./UpgradeSignalsModal";
 
 const miniContext = createContext();
 
 export default function AppContext({ children }) {
-  // ۱. چک می‌کنیم که آیا اسکریپت بله لود شده و initData داره یا نه
-  const [isBaleReady, setIsBaleReady] = useState(false);
-  const [initData, setInitData] = useState(null);
-
-  // ۲. یک افکت برای صبر کردن تا لود شدن اسکریپت بله
+  // Apply the Telegram theme once the SDK + initData are available.
   useEffect(() => {
-    const checkBale = () => {
-      // چک می‌کنیم که آیا window.Bale.WebApp وجود داره و initData هم داره؟
-      // if (window.Bale && window.Bale.WebApp && window.Bale.WebApp.initData) {
-      //   setInitData(window.Bale.WebApp.initData);
-      //   window.Bale.WebApp.setHeaderColor('#00b894')
-      //   setIsBaleReady(true);
-      // }
-      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
-        setInitData(window.Telegram.WebApp.initData);
-        window.Telegram.WebApp.setHeaderColor('#00b894')
-        setIsBaleReady(true);
-       
-      }
-      
-      else {
-        // اگر هنوز لود نشده، دوباره چک کن (مثلا هر ۱۰۰ میلی‌ثانیه)
-        setTimeout(checkBale, 100);
-      }
+    let interval;
+    let stop;
+
+    const applyTheme = () => {
+      const webApp = window.Telegram?.WebApp;
+      if (!webApp?.initData) return false;
+      webApp.setHeaderColor("#047857");
+      webApp.setBackgroundColor("#f4f7f9");
+      if (typeof webApp.expand === "function") webApp.expand();
+      return true;
     };
 
-    // checkBale();
+    if (!applyTheme()) {
+      interval = setInterval(() => {
+        if (applyTheme()) {
+          clearInterval(interval);
+          clearTimeout(stop);
+        }
+      }, 300);
+      stop = setTimeout(() => clearInterval(interval), 5000);
+    }
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(stop);
+    };
   }, []);
 
-  // ۳. حالا درخواست به بک‌اند رو فقط زمانی انجام بده که initData آماده باشه
   const { data, isLoading, error } = useQuery({
-    queryKey: ["auth"], // وقتی initData تغییر کرد، دوباره کوئری رو اجرا کن
-    queryFn: () => {
-      // اگر initData هنوز null بود، اصلا درخواست نزن (هرچند با enabled کنترل میشه)
-      // if (!initData) return Promise.reject(new Error("InitData not ready"));
-      
-      return api.post("/auth");
-    },
-    // ✅ این خط خیلی مهمه: فقط وقتی initData وجود داشته باشه، درخواست رو بزن
-    // enabled: !!initData, 
-
-    refetchInterval : 10000,
-    // اگر می‌خوای هر بار که initData عوض شد (مثلا کاربر عوض شد) دوباره چک کن
-    // staleTime: 1000 * 60 * 5, // ۵ دقیقه
+    queryKey: ["auth"],
+    queryFn: () => api.post("/auth"),
+    refetchInterval: 10000,
   });
-
 
   const userData = data?.data?.data;
 
-  // useEffect(() => {
-  //   if(!initData && !data) return
-  //   const a = {
-  //     is_vip : userData?.is_vip,
-  //     chat_id: userData?.chat_id,
-  //     vip:userData?.vip,
-  //     remaining_day:userData?.remaining_day,
-  //     role : userData?.role
-  //   }
-  //   // localStorage.setItem('initData1',initData)
-  //   // localStorage.setItem('userData1',JSON.stringify(a))
- 
-  // }, [initData,data])
+  // Detect the exact moment the account turns VIP (normal/expired -> VIP).
+  // `null` means we have not received real user data yet, so an already-VIP
+  // user opening the app does not trigger the modal.
+  const previousVip = useRef(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  useEffect(() => {
+    if (!userData) return;
+    const isVip = Boolean(userData.is_vip);
+    if (previousVip.current === false && isVip) {
+      setShowUpgradeModal(true);
+    }
+    previousVip.current = isVip;
+  }, [userData]);
 
   return (
     <miniContext.Provider value={{ userData, isLoading, error }}>
       {children}
+      <UpgradeSignalsModal
+        open={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+      />
     </miniContext.Provider>
   );
 }

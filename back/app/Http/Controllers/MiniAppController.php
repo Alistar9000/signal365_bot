@@ -60,19 +60,36 @@ class MiniAppController extends Controller
         }
         
         $chatId = $user['id'];
-        // \Log::info('user: '.json_encode($user));
+         \Log::info('chatID: '.$chatId);
         $firstName = $user['first_name'] ?? '';
         $userName = $user['username'] ?? '';
        
         // $token = Str::random(60);
         $sendToken = null;
-        
-        $userr = User::updateOrCreate(['chat_id' => $chatId],
-        [
+
+        // برخی سرویس‌ها شناسه کاربر را در initData به صورت ۳۲ بیتی بریده
+        // (mod 2^32) میفرستند. ابتدا شناسه دقیق را جستجو میکنیم و در صورت
+        // نبودن، رکوردی را مییابیم که شناسه واقعیاش به همین عدد بریده شود.
+        $userr = User::where('chat_id', $chatId)->first();
+
+        if (! $userr && is_numeric($chatId) && (float) $chatId > 0) {
+            $userr = User::whereRaw('(chat_id % 4294967296) = ?', [(string) $chatId])
+                ->orderByDesc('chat_id')
+                ->first();
+        }
+
+        $userAttributes = [
             'name' => $firstName,
-            'username' => $userName
-            ]
-        );
+            'username' => $userName,
+        ];
+
+        if ($userr) {
+            $userr->update($userAttributes);
+        } else {
+            $userr = User::create(array_merge(['chat_id' => $chatId], $userAttributes));
+        }
+
+        \Log::info('chatID: '.$userr->chat_id);
         // if(!$userr->api_token){
             // $userr->api_token = $token;
             // $userr->save();
@@ -103,7 +120,7 @@ class MiniAppController extends Controller
                     'vip' => $userr->is_vip,
                     'role' => $userr->role,
                     'remaining_day' => $userr->remaining_days,
-                    'photo_url' => $user['photo_url']
+                    'photo_url' => $user['photo_url'] ?? null
                     ]
             ]);
      
@@ -641,6 +658,52 @@ class MiniAppController extends Controller
         return response()->json(['success' => false]);
        }
         
+    }
+
+    public function addPlan(Request $request)
+    {
+       $plan = $request->input('plan');
+
+       $type = $plan['type'] ?? null;
+       $period = $plan['period'] ?? null;
+       $price = $plan['price'] ?? null;
+       $offPrice = $plan['off_price'] ?? 0;
+       $offPercent = $plan['off_percent'] ?? 0;
+
+       if ($type === null || $type === '' || $period === null || $period === '' ||
+           $price === null || $price === '') {
+           return response()->json([
+               'success' => false,
+               'message' => 'نوع، مدت و قیمت پلن الزامی هستند'
+           ]);
+       }
+
+       try {
+           if (Plan::where('type', $type)->exists()) {
+               return response()->json([
+                   'success' => false,
+                   'message' => 'پلنی با این نوع از قبل وجود دارد'
+               ]);
+           }
+
+           Plan::create([
+               'type' => $type,
+               'period' => $period,
+               'price' => $price,
+               'off_price' => $offPrice === '' ? 0 : $offPrice,
+               'off_percent' => $offPercent === '' ? 0 : $offPercent,
+           ]);
+
+           return response()->json([
+               'success' => true,
+               'message' => 'پلن جدید با موفقیت ثبت شد'
+           ]);
+       } catch (\Exception $e) {
+           return response()->json([
+               'success' => false,
+               'message' => 'خطا در ثبت پلن'
+           ]);
+       }
     }
  
     public function sendMessage(Request $request)

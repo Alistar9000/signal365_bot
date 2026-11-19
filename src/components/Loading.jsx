@@ -1,8 +1,12 @@
-const Loading = () => {
+const Loading = ({ label = "در حال بارگذاری..." }) => {
   return (
-    <div className="absolute backdrop-blur-sm flex items-center justify-center left-0 top-0 w-full h-full">
-      <div className="rounded-xl flex items-center justify-center border bg-white p-4 shadow-sm">
-        <div className="w-6 rounded-full aspect-square border-[4px] border-neutral-300 border-t-[var(--app-accent-text-color)] animate-spin"></div>
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/60 backdrop-blur-sm animate-fade-in">
+      <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/70 bg-white/90 px-6 py-5 shadow-float">
+        <div className="relative h-9 w-9">
+          <div className="absolute inset-0 rounded-full border-[3px] border-brand-100" />
+          <div className="absolute inset-0 animate-spin rounded-full border-[3px] border-transparent border-t-brand-500" />
+        </div>
+        <p className="text-[11px] font-semibold text-muted">{label}</p>
       </div>
     </div>
   );

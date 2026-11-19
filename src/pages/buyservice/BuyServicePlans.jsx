@@ -1,77 +1,78 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  Check,
-  CheckSquare,
-  ChevronLeft,
-  SkipBack,
-  Square,
-  Star,
-  StepBack,
-} from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, Crown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api } from "../../util/axios";
-import { MiniAppContext } from "../../components/AppContext";
+import { formatPrice, toPersianDigits } from "../../util/format";
 import Loading from "../../components/Loading";
 
-const BuyServicePlans = () => {
-  const { isLoading} = MiniAppContext()
-  const { data } = useQuery({
-    queryKey: ["vip-plans"],
-    queryFn: () => api.get("/plans"),
-    enabled:!isLoading,
-  });
-  const vipServices = data?.data?.data || [];
-  const handleBuy = (title) => {
-    const handlePayment = (invoiceData) => {
-      if (invoiceData.is_paid) {
-        setSuccess(true);
-      } else {
-        setSuccess(false);
-      }
-      const url = "https://www.zarinpal.com/pg/StartPay/111252025";
-      window.Bale.WebApp.openInvoice(
-        `سرویس VIP ${title} ربات سیگنال هوشمند`,
-        url,
-        handlePayment,
-      );
-    };
-  };
+const byShortestFirst = (a, b) =>
+  (Number(a.type) || Number.MAX_SAFE_INTEGER) -
+  (Number(b.type) || Number.MAX_SAFE_INTEGER);
 
-  if(isLoading) return <Loading />
+const BuyServicePlans = () => {
+  const { data, isLoading } = useQuery({
+    queryKey: ["plans"],
+    queryFn: () => api.get("/plans"),
+  });
+
+  const vipServices = [...(data?.data?.data || [])].sort(byShortestFirst);
+
+  if (isLoading) return <Loading label="در حال بارگذاری پلن ها..." />;
 
   return (
-    <div className="flex w-full flex-col gap-8">
-      {vipServices.map((item, index) => (
+    <div className="flex flex-col gap-4 animate-fade-up">
+      {vipServices.length === 0 && (
+        <div className="empty-state">
+          <Crown size={22} className="text-slate-300" />
+          <p className="text-xs text-muted">در حال حاضر پلنی موجود نیست.</p>
+        </div>
+      )}
+
+      {vipServices.map((item) => (
         <Link
-          to={`/mini-app/buy-service/${item.type}/${item.off_price}`}
           key={item.id}
-          className="border cursor-pointer shadow hover:bg-neutral-50 hover:shadow-md hover:scale-105 transition-all duration-300 rounded-xl flex flex-col justify-center  px-4 py-8 w-full relative bg-[var(--app-bg-color)]"
+          to={`/mini-app/buy-service/${item.type}/${item.off_price}`}
+          className="group card relative overflow-hidden p-5 pt-7 transition duration-200 hover:-translate-y-0.5 hover:shadow-float active:scale-[.99]"
         >
-          <div className="absolute -top-2 -right-2 rounded-xl  p-2 shadow  text-white bg-[var(--app-accent-text-color)] text-sm">
-            {item.type} ماه کاری ( {item.period} روز )
+          <div className="pointer-events-none absolute -right-10 -top-12 h-32 w-32 rounded-full bg-brand-50" />
+
+          <span className="absolute right-0 top-0 rounded-bl-2xl bg-brand-500 px-3 py-1.5 text-[11px] font-bold text-white">
+            {toPersianDigits(item.type)} ماهه
+          </span>
+
+          <div className="relative flex items-end justify-between gap-3">
+            <div>
+              <p className="text-[11px] text-muted">مدت اشتراک</p>
+              <p className="mt-1 text-lg font-extrabold text-ink">
+                {toPersianDigits(item.period)} روز
+              </p>
+            </div>
+            <div className="text-left">
+              <p className="text-[11px] text-muted">قیمت ویژه</p>
+              <p
+                dir="ltr"
+                className="mt-1 flex items-baseline gap-1 text-xl font-extrabold text-brand-700"
+              >
+                <span className="text-[10px] font-semibold text-muted">تومان</span>
+                {formatPrice(item.off_price)}
+              </p>
+            </div>
           </div>
 
-          <p className="text-[var(--app-text-color)] font-bold w-full justify-end flex items-center">
-            {item.off_price}{" "}
-            <span className="text-xs px-1 text-[var(--app-subtitle-text-color)]">
-              تومان
+          <div className="relative mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+            {Number(item.off_percent) > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="chip bg-rose-50 text-rose-600 ring-1 ring-rose-100">
+                  {toPersianDigits(item.off_percent)}% تخفیف
+                </span>
+                <span dir="ltr" className="text-[11px] text-slate-400 line-through">
+                  {formatPrice(item.price)}
+                </span>
+              </div>
+            )}
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-600">
+              انتخاب <ArrowLeft size={13} />
             </span>
-          </p>
-
-          <div className="flex w-full h-full items-center justify-between">
-            <div className="flex gap-2 items-center">
-              <p className="bg-[var(--app-red-bg-color)] rounded-md text-sm px-1 py-0.5 text-white">
-                {item.off_percent}%
-              </p>
-              <span className="text-xs font-bold text-[var(--app-subtitle-text-color)]">
-                تخفیف
-              </span>
-            </div>
-            <p className=" text-end w-full line-through text-neutral-500 pl-9 text-xs">
-              {item.price}
-            </p>
           </div>
         </Link>
       ))}
