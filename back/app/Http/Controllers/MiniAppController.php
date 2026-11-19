@@ -60,7 +60,7 @@ class MiniAppController extends Controller
         }
         
         $chatId = $user['id'];
-         \Log::info('chatID: '.$chatId);
+        //  \Log::info('chatID: '.$chatId);
         $firstName = $user['first_name'] ?? '';
         $userName = $user['username'] ?? '';
        
@@ -89,7 +89,7 @@ class MiniAppController extends Controller
             $userr = User::create(array_merge(['chat_id' => $chatId], $userAttributes));
         }
 
-        \Log::info('chatID: '.$userr->chat_id);
+        // \Log::info('chatID: '.$userr->chat_id);
         // if(!$userr->api_token){
             // $userr->api_token = $token;
             // $userr->save();
@@ -111,11 +111,12 @@ class MiniAppController extends Controller
         // $userr->api_token = $tokenn;
         // $userr->save();
         // }
-        
+          \Log::info('name: '.$userr->name);
             return response()->json([
                 // 'token' => $token,
                 'data' => [
                     'chat_id' => $userr->chat_id,
+                    'name'   => $userr->name,
                     'is_vip' => $userr->isVip(),
                     'vip' => $userr->is_vip,
                     'role' => $userr->role,
@@ -371,8 +372,9 @@ class MiniAppController extends Controller
            return response()->json(['success' => false]);
            
            $plan = $request->input('plan');
+        //   \Log::info('plan: '.$plan);
            $period = Plan::where('type',$plan)->pluck('period')->first();
-           
+        //   \Log::info('period: '.$period);
            $user = User::where('chat_id',$chatId)->first();
            
            if(!$user)
@@ -659,8 +661,7 @@ class MiniAppController extends Controller
        }
         
     }
-
-    public function addPlan(Request $request)
+      public function addPlan(Request $request)
     {
        $plan = $request->input('plan');
 

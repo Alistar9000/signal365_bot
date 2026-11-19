@@ -33,8 +33,8 @@ Route::prefix('/mini-app')->group(function () {
              Route::post('/check-user',[MiniAppController::class, 'checkUser']);
             Route::post('/vips/add',[MiniAppController::class, 'addVips']);
             Route::post('/vips/delete',[MiniAppController::class, 'deleteVips']);
-            Route::post('/vips/add',[MiniAppController::class, 'addVips']);
-            Route::post('/vips/delete',[MiniAppController::class, 'deleteVips']);
+            // Route::post('/vips/add',[MiniAppController::class, 'addVips']);
+            // Route::post('/vips/delete',[MiniAppController::class, 'deleteVips']);
             Route::post('/add',[MiniAppController::class, 'addAdmin']);
             Route::post('/delete',[MiniAppController::class, 'deleteAdmin']);
             Route::get('/get',[MiniAppController::class, 'getAdmin']);
@@ -44,8 +44,8 @@ Route::prefix('/mini-app')->group(function () {
             Route::post('/add-days/all',[MiniAppController::class, 'addDaysAll']);
             Route::post('/add-days/vip',[MiniAppController::class, 'addDaysVip']);
             Route::post('/plans',[MiniAppController::class, 'updatePlans']);
-            Route::post('/plans/add',[MiniAppController::class, 'addPlan']);
             Route::post('/send-message',[MiniAppController::class, 'sendMessage']);
+            Route::post('/plans/add',[MiniAppController::class, 'addPlan']);
             // Route::post('/send-vip',[MiniAppController::class, 'sendMessageToVip']);
          });
     });
