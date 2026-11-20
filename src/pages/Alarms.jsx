@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
   Check,
+  ChevronDown,
   Info,
   ListChecks,
   Plus,
@@ -70,6 +71,180 @@ const checkboxClass = (checked) =>
       : "border-slate-300 bg-white text-transparent"
   }`;
 
+const formatSignalReturn = (value) => {
+  if (value === null || value === undefined || value === "") return "—";
+  const text = String(value);
+  const withPercent = /^-?\d+(?:\.\d+)?$/.test(text) ? `${text}%` : text;
+  return toPersianDigits(withPercent);
+};
+
+const isNegativeReturn = (value) => {
+  if (value === null || value === undefined || value === "") return false;
+  const text = String(value).trim();
+  // Handles numbers, "-1.2%", "−1.2" and Persian digits alike.
+  if (/^[-−]/.test(text)) return true;
+  const number = Number(text);
+  return Number.isFinite(number) && number < 0;
+};
+
+const parseSignalReturn = (value) => {
+  if (value === null || value === undefined || value === "") return 0;
+  const normalized = String(value)
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06F0))
+    .replace(/[^\d.-]/g, "");
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : 0;
+};
+
+// Open signals always come first; inside each group the highest return leads.
+// Ties keep the original API order because Array#sort is stable.
+const sortBySignal = (symbols) =>
+  [...symbols].sort((a, b) => {
+    const groupA = a?.last_signal?.status === "open" ? 0 : 1;
+    const groupB = b?.last_signal?.status === "open" ? 0 : 1;
+    if (groupA !== groupB) return groupA - groupB;
+    return (
+      parseSignalReturn(b?.last_signal?.return) -
+      parseSignalReturn(a?.last_signal?.return)
+    );
+  });
+
+const SignalStatusBadge = ({ status, returnValue }) => {
+  const isOpen = status === "open";
+  const negative = isNegativeReturn(returnValue);
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center gap-1 text-[9px] font-extrabold ${
+        isOpen ? "text-emerald-600" : "text-slate-500"
+      }`}
+    >
+      <span
+        className={`h-[5px] w-[5px] rounded-full ${
+          isOpen
+            ? `animate-pulse-shadow ${negative ? "bg-rose-500 pulse-rose" : "bg-emerald-500"}`
+            : "bg-slate-400"
+        }`}
+      />
+      {isOpen ? "باز" : "بسته"}
+    </span>
+  );
+};
+
+// Only the return is pushed to the far left (mr-auto in RTL), leaving the
+// short name and the status badge together on the right.
+const SignalReturn = ({ status, value }) => {
+  const isOpen = status === "open";
+  const negative = isNegativeReturn(value);
+  return (
+    <div className="mr-auto shrink-0 pl-1">
+      <span
+        dir="ltr"
+        title="بازدهی"
+        className={`text-[10px] font-extrabold ${
+          !isOpen
+            ? "text-slate-500"
+            : negative
+              ? "text-rose-600"
+              : "text-emerald-600"
+        }`}
+      >
+        {formatSignalReturn(value)}
+      </span>
+    </div>
+  );
+};
+
+const SignalDateLine = ({ lastSignal }) => {
+  const isOpen = lastSignal?.status === "open";
+  return (
+    <div className="mt-0.5 flex items-center gap-1 text-[9px] font-bold text-muted">
+      <span>{isOpen ? "تاریخ سیگنال" : "تاریخ سیگنال فروش"}</span>
+      <span dir="ltr">{toPersianDigits(lastSignal?.date)}</span>
+    </div>
+  );
+};
+
+// Compact inline history shown by expanding a watchlist row.
+const SignalHistoryCollapse = ({ data, loading, status }) => {
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 px-3.5 py-2.5 text-[10px] text-muted">
+        <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-200 border-t-brand-500" />
+        در حال بارگذاری سابقه...
+      </div>
+    );
+  }
+
+  // An open position is still inside history without a sell_date — hide it
+  // while the signal is open. Closed signals show their whole past history.
+  const isOpen = status === "open";
+  const history = (data?.history || []).filter(
+    (signal) => !isOpen || Boolean(signal?.sell_date)
+  );
+
+  return (
+    <div className="border-t border-slate-100 bg-slate-50/70 px-3.5 py-2">
+      <p className="mb-1.5 text-[9px] font-extrabold text-muted">
+        سابقه سیگنالها
+      </p>
+      {history.length ? (
+        <div className="max-h-32 space-y-1 overflow-y-auto overscroll-contain">
+          {history.map((signal, index) => {
+            const positive = Number(signal?.return) >= 0;
+            const buyDate = signal?.buy_date
+              ? toPersianDigits(signal.buy_date)
+              : null;
+            const sellDate = signal?.sell_date
+              ? toPersianDigits(signal.sell_date)
+              : null;
+            return (
+              <div
+                key={index}
+                className="flex items-center gap-2 rounded-lg bg-white px-2 py-1"
+              >
+                <span
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                    positive ? "bg-emerald-500" : "bg-rose-500"
+                  }`}
+                />
+                <span
+                  dir="ltr"
+                  className={`text-[10px] font-extrabold ${
+                    positive ? "text-emerald-600" : "text-rose-600"
+                  }`}
+                >
+                  {toPersianDigits(signal?.return)}%
+                </span>
+                {(buyDate || sellDate) && (
+                  <span
+                    dir="rtl"
+                    className="mr-auto flex items-center gap-1 text-[9px]"
+                  >
+                    {buyDate && (
+                      <span className="text-emerald-600">{buyDate}</span>
+                    )}
+                    {buyDate && sellDate && (
+                      <span className="text-muted">←</span>
+                    )}
+                    {sellDate && (
+                      <span className="text-rose-600">{sellDate}</span>
+                    )}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="py-1 text-center text-[10px] text-muted">
+          سابقهای یافت نشد
+        </p>
+      )}
+    </div>
+  );
+};
+
 const Alarms = () => {
   const [panel, setPanel] = useState(null);
   const [messageModal, setMessageModal] = useState(null);
@@ -82,6 +257,9 @@ const Alarms = () => {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedCodes, setSelectedCodes] = useState([]);
   const [showNotice, setShowNotice] = useState(false);
+  const [expandedCode, setExpandedCode] = useState(null);
+  const [historyByCode, setHistoryByCode] = useState({});
+  const [historyLoading, setHistoryLoading] = useState(null);
 
   const alarmSearchRef = useRef(null);
   const toastTimer = useRef(null);
@@ -140,7 +318,37 @@ const Alarms = () => {
     },
   });
 
-  const list = data?.data?.data || [];
+  const list = sortBySignal(data?.data?.data || []);
+
+  const toggleHistory = async (symbol) => {
+    if (!userData?.is_vip) return;
+
+    if (expandedCode === symbol.code) {
+      setExpandedCode(null);
+      return;
+    }
+
+    setExpandedCode(symbol.code);
+    if (historyByCode[symbol.code]) return;
+
+    setHistoryLoading(symbol.code);
+    try {
+      const response = await api.post("/stock-history", {
+        search: symbol.code,
+        vip: userData?.is_vip || null,
+      });
+      if (response.data.data) {
+        setHistoryByCode((current) => ({
+          ...current,
+          [symbol.code]: {
+            history: response.data.data.history || [],
+          },
+        }));
+      }
+    } finally {
+      setHistoryLoading(null);
+    }
+  };
 
   const togglePanel = (name) => {
     if (panel === name) {
@@ -494,46 +702,107 @@ const Alarms = () => {
             {list.map((symbol) => {
               const deleting = deletingCodes.includes(symbol.code);
               const selected = selectedCodes.includes(symbol.code);
-              return (
-                <div
-                  key={symbol.code}
-                  onClick={selectMode ? () => toggleCode(symbol.code) : undefined}
-                  className={`flex items-center gap-3 px-3.5 py-3 transition ${
-                    selectMode
-                      ? `cursor-pointer ${selected ? "bg-brand-50/70" : "hover:bg-slate-50/70"}`
+              const isClosed = symbol.last_signal?.status === "close";
+              const rowClass = selectMode
+                ? `flex cursor-pointer items-center gap-3 px-3.5 py-3 transition ${
+                    selected
+                      ? "bg-brand-50/70"
+                      : isClosed
+                        ? "bg-slate-100/70"
+                        : "hover:bg-slate-50/70"
+                  }`
+                : `flex items-center gap-3 px-3.5 py-3 transition ${
+                    isClosed
+                      ? "bg-slate-100/70 hover:bg-slate-200/60"
                       : "hover:bg-slate-50/70"
-                  }`}
-                >
-                  {selectMode && (
-                    <span className={checkboxClass(selected)}>
-                      <Check size={13} strokeWidth={3} />
+                  }`;
+              return (
+                <div key={symbol.code}>
+                  <div
+                    onClick={selectMode ? () => toggleCode(symbol.code) : undefined}
+                    className={rowClass}
+                  >
+                    {selectMode && (
+                      <span className={checkboxClass(selected)}>
+                        <Check size={13} strokeWidth={3} />
+                      </span>
+                    )}
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-[13px] font-extrabold text-brand-700">
+                      {symbol.name?.[0] ?? "؟"}
                     </span>
-                  )}
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-[13px] font-extrabold text-brand-700">
-                    {symbol.name?.[0] ?? "؟"}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-bold text-ink">
-                      {symbol.name}
-                    </p>
-                    <p dir="ltr" className="truncate text-[10px] text-muted">
-                      {symbol.code}
-                    </p>
-                  </div>
-                  {!selectMode && (
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(symbol)}
-                      disabled={deleting}
-                      aria-label={`حذف ${symbol.name}`}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-300 transition hover:bg-rose-50 hover:text-rose-500 active:scale-90 disabled:opacity-40"
-                    >
-                      {deleting ? (
-                        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-rose-200 border-t-rose-500" />
-                      ) : (
-                        <Trash2 size={16} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p
+                          onClick={
+                            selectMode || !userData?.is_vip
+                              ? undefined
+                              : () => toggleHistory(symbol)
+                          }
+                          className={`flex shrink-0 items-center gap-0.5 text-[13px] font-bold text-ink ${
+                            selectMode || !userData?.is_vip
+                              ? ""
+                              : "cursor-pointer hover:text-brand-600"
+                          }`}
+                        >
+                          {symbol.name}
+                          {userData?.is_vip && (
+                            <ChevronDown
+                              size={11}
+                              className={`transition-transform ${
+                                expandedCode === symbol.code ? "rotate-180" : ""
+                              }`}
+                            />
+                          )}
+                        </p>
+                        {userData?.is_vip && symbol.last_signal?.status && (
+                          <SignalStatusBadge
+                            status={symbol.last_signal.status}
+                            returnValue={symbol.last_signal.return}
+                          />
+                        )}
+                        {userData?.is_vip && symbol.last_signal && (
+                          <SignalReturn
+                            status={symbol.last_signal.status}
+                            value={symbol.last_signal.return}
+                          />
+                        )}
+                      </div>
+                      {userData?.is_vip && symbol.last_signal && (
+                        <SignalDateLine lastSignal={symbol.last_signal} />
                       )}
-                    </button>
+                    </div>
+                    {!selectMode && (
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(symbol)}
+                        disabled={deleting}
+                        aria-label={`حذف ${symbol.name}`}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-300 transition hover:bg-rose-50 hover:text-rose-500 active:scale-90 disabled:opacity-40"
+                      >
+                        {deleting ? (
+                          <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-rose-200 border-t-rose-500" />
+                        ) : (
+                          <Trash2 size={16} />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                  {userData?.is_vip && (
+                    <div
+                      className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+                        expandedCode === symbol.code
+                          ? "grid-rows-[1fr]"
+                          : "grid-rows-[0fr]"
+                      }`}
+                    >
+                      <div className="overflow-hidden">
+                        <SignalHistoryCollapse
+                          data={historyByCode[symbol.code]}
+                          loading={historyLoading === symbol.code}
+                          status={symbol.last_signal?.status}
+                        />
+                      </div>
+                    </div>
                   )}
                 </div>
               );
@@ -607,6 +876,7 @@ const Alarms = () => {
           setPanel("add");
         }}
       />
+
     </div>
   );
 };
