@@ -6,6 +6,7 @@ import {
   Info,
   ListChecks,
   Plus,
+  RefreshCw,
   Search,
   Trash2,
   X,
@@ -97,13 +98,19 @@ const parseSignalReturn = (value) => {
   return Number.isFinite(number) ? number : 0;
 };
 
-// Open signals always come first; inside each group the highest return leads.
-// Ties keep the original API order because Array#sort is stable.
+// Symbols whose last_signal is null always come last. Then open signals lead,
+// and inside each group the highest return comes first. Ties keep the original
+// API order because Array#sort is stable.
 const sortBySignal = (symbols) =>
   [...symbols].sort((a, b) => {
+    const aEmpty = a?.last_signal === null || a?.last_signal === undefined;
+    const bEmpty = b?.last_signal === null || b?.last_signal === undefined;
+    if (aEmpty !== bEmpty) return aEmpty ? 1 : -1;
+
     const groupA = a?.last_signal?.status === "open" ? 0 : 1;
     const groupB = b?.last_signal?.status === "open" ? 0 : 1;
     if (groupA !== groupB) return groupA - groupB;
+
     return (
       parseSignalReturn(b?.last_signal?.return) -
       parseSignalReturn(a?.last_signal?.return)
@@ -238,7 +245,7 @@ const SignalHistoryCollapse = ({ data, loading, status }) => {
         </div>
       ) : (
         <p className="py-1 text-center text-[10px] text-muted">
-          سابقهای یافت نشد
+          سابقه ای یافت نشد
         </p>
       )}
     </div>
@@ -268,10 +275,11 @@ const Alarms = () => {
   const { search } = useDebounce(searchInput);
   const { userData, isLoading: loading } = MiniAppContext();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, isFetching, refetch } = useQuery({
     queryKey: ["alarms"],
     queryFn: () => api.get("/alarms"),
     enabled: !loading,
+    retry: 1,
   });
 
   const notify = (text) => {
@@ -295,6 +303,10 @@ const Alarms = () => {
   const addMut = useMutation({
     mutationFn: (payload) => api.put("/alarms/add", { list: payload }),
     onSuccess: (res) => {
+      if (res?.data?.error) {
+        notify("ثبت لیست هشدار با مشکل مواجه شد. لطفاً دوباره تلاش کنید.");
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ["alarms"] });
       if (res?.data?.reach_max) {
         const names = res.data.reach_max.map((s) => s.name).join("، ");
@@ -305,12 +317,20 @@ const Alarms = () => {
       setSearchInput("");
       setSearchContent([]);
     },
+    onError: () => notify("خطا در ارتباط با سرور. لطفاً دوباره تلاش کنید."),
     onSettled: () => setSubmitting(false),
   });
 
   const deleteMut = useMutation({
     mutationFn: (codes) => api.put("/alarms/delete", { list: codes }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["alarms"] }),
+    onSuccess: (res) => {
+      if (res?.data?.error) {
+        notify("حذف نماد با مشکل مواجه شد. لطفاً دوباره تلاش کنید.");
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ["alarms"] });
+    },
+    onError: () => notify("خطا در ارتباط با سرور. لطفاً دوباره تلاش کنید."),
     onSettled: () => {
       setDeletingCodes([]);
       setSelectMode(false);
@@ -368,8 +388,12 @@ const Alarms = () => {
   useEffect(() => {
     let active = true;
     const fetchSearch = async () => {
-      const response = await api.post("/symbols", { search });
-      if (active) setSearchContent(response.data.data ?? []);
+      try {
+        const response = await api.post("/symbols", { search });
+        if (active) setSearchContent(response.data.data ?? []);
+      } catch {
+        if (active) notify("خطا در جستجوی نماد. لطفاً دوباره تلاش کنید.");
+      }
     };
     if (search.trim() !== "") fetchSearch();
     return () => {
@@ -441,6 +465,42 @@ const Alarms = () => {
   };
 
   if (loading || isLoading) return <Loading />;
+
+  if (isError) {
+    return (
+      <div className="animate-fade-in">
+        <PageHeader
+          title="لیست هشدار"
+          subtitle="نمادهای دلخواه خود را ذخیره و سیگنال هایشان را دنبال کنید."
+        />
+        <div className="card mt-8 px-6 py-9 text-center">
+          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-500">
+            <Info size={22} />
+          </span>
+          <h2 className="mt-4 text-[14px] font-extrabold text-ink">
+            نتوانستم لیست هشدار را بارگذاری کنم
+          </h2>
+          <p className="mx-auto mt-2 max-w-[260px] text-[11px] leading-5 text-muted">
+            مشکلی در ارتباط با سرور پیش آمد. لطفاً لحظهای دیگر دوباره تلاش
+            کنید.
+          </p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="btn-primary mx-auto mt-5 flex items-center gap-2 !px-6 disabled:opacity-60"
+          >
+            {isFetching ? (
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+            ) : (
+              <RefreshCw size={14} />
+            )}
+            تلاش مجدد
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="animate-fade-in">
