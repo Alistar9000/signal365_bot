@@ -17,6 +17,7 @@ export default function SignalHistorySheet({
   signalHistory,
   totalReturn,
   isVip = true,
+  error = false,
   onClose,
 }) {
   const sheetRef = useRef(null);
@@ -112,7 +113,9 @@ export default function SignalHistorySheet({
                   Number(totalReturn) >= 0 ? "text-emerald-600" : "text-rose-500"
                 }`}
               >
-                {toPersianDigits(totalReturn)}%
+                {totalReturn === null || totalReturn === undefined
+                  ? "—"
+                  : `${toPersianDigits(totalReturn)}%`}
               </p>
             </div>
           </div>
@@ -122,64 +125,74 @@ export default function SignalHistorySheet({
 
         {/* Scrollable body — the last signal is always reachable */}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-[calc(20px+env(safe-area-inset-bottom))]">
-          <table className="table-modern">
-            <thead>
-              <tr>
-                <th>سیگنال</th>
-                <th>بازدهی</th>
-                <th>
-                  <span className="flex items-center justify-center gap-1">
-                    تاریخ <CalendarDays size={13} />
-                  </span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {signalHistory
-                ?.filter((e) => (!isVip ? e.sell_date : e))
-                .map((signal, index) => (
-                  <tr key={index}>
-                    <td>
-                      <span
-                        className={`mx-auto block h-3.5 w-3.5 rounded-full ${
-                          Number(signal?.return) >= 0
-                            ? "bg-emerald-500"
-                            : "bg-rose-500"
-                        } ${
-                          !signal?.sell_date
-                            ? `animate-pulse-shadow ${
-                                Number(signal?.return) >= 0 ? "" : "pulse-rose"
-                              }`
-                            : ""
-                        }`}
-                      />
-                    </td>
-                    <td>
-                      <span
-                        dir="ltr"
-                        className={`inline-block rounded-lg px-2 py-1 text-[11px] font-bold ${returnTone(
-                          signal?.return
-                        )}`}
-                      >
-                        {toPersianDigits(signal?.return)}%
-                      </span>
-                    </td>
-                    <td>
-                      <div className="flex flex-col items-center gap-1">
-                        {signal?.sell_date && (
-                          <span className="chip bg-rose-50 text-rose-600">
-                            {toPersianDigits(signal.sell_date)}
-                          </span>
-                        )}
-                        <span className="chip bg-emerald-50 text-emerald-600">
-                          {toPersianDigits(signal?.buy_date)}
+          {error ? (
+            <p className="py-8 text-center text-xs text-rose-500">
+              نتوانستم سابقهٔ این نماد را بارگذاری کنم.
+            </p>
+          ) : !signalHistory?.length ? (
+            <p className="py-8 text-center text-xs text-muted">
+              سابقهٔ سیگنالی برای این نماد ثبت نشده است.
+            </p>
+          ) : (
+            <table className="table-modern">
+              <thead>
+                <tr>
+                  <th>سیگنال</th>
+                  <th>بازدهی</th>
+                  <th>
+                    <span className="flex items-center justify-center gap-1">
+                      تاریخ <CalendarDays size={13} />
+                    </span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {signalHistory
+                  ?.filter((e) => (!isVip ? e.sell_date : e))
+                  .map((signal, index) => (
+                    <tr key={index}>
+                      <td>
+                        <span
+                          className={`mx-auto block h-3.5 w-3.5 rounded-full ${
+                            Number(signal?.return) >= 0
+                              ? "bg-emerald-500"
+                              : "bg-rose-500"
+                          } ${
+                            !signal?.sell_date
+                              ? `animate-pulse-shadow ${
+                                  Number(signal?.return) >= 0 ? "" : "pulse-rose"
+                                }`
+                              : ""
+                          }`}
+                        />
+                      </td>
+                      <td>
+                        <span
+                          dir="ltr"
+                          className={`inline-block rounded-lg px-2 py-1 text-[11px] font-bold ${returnTone(
+                            signal?.return
+                          )}`}
+                        >
+                          {toPersianDigits(signal?.return)}%
                         </span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
+                      </td>
+                      <td>
+                        <div className="flex flex-col items-center gap-1">
+                          {signal?.sell_date && (
+                            <span className="chip bg-rose-50 text-rose-600">
+                              {toPersianDigits(signal.sell_date)}
+                            </span>
+                          )}
+                          <span className="chip bg-emerald-50 text-emerald-600">
+                            {toPersianDigits(signal?.buy_date)}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </>,

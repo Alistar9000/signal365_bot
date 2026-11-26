@@ -163,16 +163,41 @@ class MiniAppController extends Controller
        $alerts = $alerts->map(function($alert){
            return [
                'code' => $alert->symbol->code ,
-               'name' => $alert->symbol->name
+               'name' => $alert->symbol->name ,
+               'last_signal' =>$alert->symbol ? $this->LastSignalStatus($alert->symbol->code) : null
                ];
        });
        
        return response()->json(['data' => $alerts]);
     }
+    
+    public function LastSignalStatus($code){
+        $lastPair = Signal::where('symbol_code',$code)->orderByDesc('id')->take(2)->get();
+     
+        if ($lastPair->isEmpty()) {
+        return null;
+    }
+        if($lastPair[0]->type === 'buy'){
+            $price = $lastPair[0]->symbol->close;
+             if (! $price || ! (float) $lastPair[0]->close) {
+            return null;
+        }
+            $return = round(($price - $lastPair[0]->close) / $lastPair[0]->close * 100);
+            return ['status' => 'open','return' => $return,'date' => $lastPair[0]->date];
+        }
+        if($lastPair[0]->type === 'sell'){
+            if(!$lastPair[1] || !$lastPair[1]->close){
+                return null;
+            }
+             $return = round(($lastPair[0]->close - $lastPair[1]->close ) / $lastPair[1]->close * 100);
+            return ['status' => 'sell','return' => $return ,'date' => $lastPair[0]->date];
+        }
+       return null; 
+    }
     public function addAlarms(Request $request){
            $symbols = $request->input('list');
            $user = $request->input('user');
-           
+           $result=[];
            if(!$user->isVip())
             return response()->json(['vip' => false]);
         //   $chatId = $request->input('chat_id');
@@ -185,6 +210,7 @@ class MiniAppController extends Controller
                    'user_chat_id' => $user->chat_id,
                    'symbol_code' => $symbol['code'],
                    ]);
+                   
               }else{
                  
                   return response()->json(['reach_max' => array_slice($symbols,$index)]); 
