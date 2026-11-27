@@ -1,10 +1,12 @@
+import { Fragment } from "react";
 import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
-  ChevronLeft,
+  ChevronDown,
 } from "lucide-react";
 import { toPersianDigits } from "../util/format";
+import SignalHistoryCollapse from "./SignalHistoryCollapse";
 
 const rankClass = (index) =>
   index === 0
@@ -111,6 +113,10 @@ export default function SymbolSignalTable({
   onSymbolClick,
   pendingCode = null,
   showSort = false,
+  expandedCode = null,
+  historyByCode = {},
+  historyLoading = null,
+  historyErrors = {},
 }) {
   return (
     <table className="table-modern">
@@ -153,12 +159,9 @@ export default function SymbolSignalTable({
       </thead>
       <tbody>
         {symbols.map((symbol, index) => (
+          <Fragment key={symbol?.id ?? symbol?.symbol_code ?? index}>
           <tr
-            key={symbol?.id ?? index}
-            onClick={() => onSymbolClick?.(symbol)}
-            className={`transition-colors ${
-              isVip ? "cursor-pointer hover:bg-brand-50/60" : ""
-            }`}
+            className="transition-colors"
           >
             <td>
               <span
@@ -168,18 +171,27 @@ export default function SymbolSignalTable({
               </span>
             </td>
             <td className="whitespace-nowrap font-bold text-ink">
-              <span className="relative flex items-center justify-center">
+              <button
+                type="button"
+                disabled={!isVip || pendingCode === symbol.symbol_code}
+                onClick={() => onSymbolClick?.(symbol)}
+                className={`relative flex w-full items-center justify-center ${
+                  isVip ? "cursor-pointer hover:text-brand-600" : "cursor-default"
+                }`}
+              >
                 {symbol?.symbol_name ?? "نماد"}
                 {isVip &&
                   (pendingCode === symbol.symbol_code ? (
                     <span className="absolute left-0 h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-200 border-t-brand-500" />
                   ) : (
-                    <ChevronLeft
+                    <ChevronDown
                       size={12}
-                      className="absolute left-0 text-slate-300"
+                      className={`absolute left-0 text-slate-300 transition-transform ${
+                        expandedCode === symbol.symbol_code ? "rotate-180" : ""
+                      }`}
                     />
                   ))}
-              </span>
+              </button>
               {(symbol?.close_percent !== null &&
                 symbol?.close_percent !== undefined) && (
                 <span className="mt-1 flex justify-center">
@@ -196,6 +208,29 @@ export default function SymbolSignalTable({
               </td>
             )}
           </tr>
+          {isVip && (
+            <tr key={`${symbol?.symbol_code ?? index}-history`}>
+              <td colSpan={4} className="!p-0 !border-b-0">
+                <div
+                  className={`grid transition-all duration-300 ${
+                    expandedCode === symbol?.symbol_code
+                      ? "mb-1 grid-rows-[1fr] opacity-100"
+                      : "grid-rows-[0fr] opacity-0"
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    <SignalHistoryCollapse
+                      data={historyByCode[symbol?.symbol_code]}
+                      loading={historyLoading === symbol?.symbol_code}
+                      error={Boolean(historyErrors[symbol?.symbol_code])}
+                      symbol_name={symbol?.symbol_name}
+                    />
+                  </div>
+                </div>
+              </td>
+            </tr>
+          )}
+          </Fragment>
         ))}
       </tbody>
     </table>

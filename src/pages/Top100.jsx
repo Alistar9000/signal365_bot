@@ -6,19 +6,16 @@ import { api } from "../util/axios";
 import Loading from "../components/Loading";
 import PageHeader from "../components/PageHeader";
 import NotVipMessage from "../components/admin/NotVipMessage";
-import SignalHistorySheet from "../components/SignalHistorySheet";
 import SymbolSignalTable from "../components/SymbolSignalTable";
 import BuyOptionsModal from "../components/BuyOptionsModal";
 import { toPersianDigits } from "../util/format";
 
 const Top100 = () => {
   const { userData, isLoading: loading } = MiniAppContext();
-  const [showDetailPanel, setShowDetailPanel] = useState(false);
-  const [signalHistory, setSignalHistory] = useState(null);
-  const [totalReturn, setTotalReturn] = useState(null);
-  const [symbolName, setSymbolName] = useState("");
   const [pendingCode, setPendingCode] = useState(null);
-  const [historyError, setHistoryError] = useState(false);
+  const [expandedCode, setExpandedCode] = useState(null);
+  const [historyByCode, setHistoryByCode] = useState({});
+  const [historyErrors, setHistoryErrors] = useState({});
   const [showBuyOptions, setShowBuyOptions] = useState(false);
   // null = ترتیب اصلی سرور، "desc" = بیشترین بازدهی، "asc" = کمترین بازدهی
   const [sortDir, setSortDir] = useState(null);
@@ -78,32 +75,34 @@ const Top100 = () => {
   const handleSymbolClick = async (symbol) => {
     if (!isVip || pendingCode) return;
 
-    // Fetch first, then mount the sheet at its final height. Mounting it while
-    // empty makes it grow after the slide-up animation, which looks like a hitch.
-    setPendingCode(symbol.symbol_code);
-    setHistoryError(false);
+    const code = symbol?.symbol_code;
+    if (!code) return;
+
+    if (expandedCode === code) {
+      setExpandedCode(null);
+      return;
+    }
+
+    setExpandedCode(code);
+    if (historyByCode[code]) return;
+
+    setPendingCode(code);
+    setHistoryErrors((current) => ({ ...current, [code]: false }));
     try {
       const response = await api.post("/stock-history", {
-        search: symbol.symbol_code,
+        search: code,
         vip: userData?.is_vip || null,
       });
       const payload = response.data?.data;
-      setSignalHistory(payload?.history ?? []);
-      setTotalReturn(payload?.totalReturn ?? null);
+      setHistoryByCode((current) => ({
+        ...current,
+        [code]: { history: payload?.history ?? [] },
+      }));
     } catch {
-      setSignalHistory([]);
-      setTotalReturn(null);
-      setHistoryError(true);
+      setHistoryErrors((current) => ({ ...current, [code]: true }));
     } finally {
-      setSymbolName(symbol.symbol_name);
-      setShowDetailPanel(true);
       setPendingCode(null);
     }
-  };
-
-  const handleBuyOptionClick = (symbol) => {
-    closeBuyOptions();
-    handleSymbolClick(symbol);
   };
 
   if (loading || isLoading) return <Loading />;
@@ -147,6 +146,10 @@ const Top100 = () => {
           onSort={handleSort}
           onSymbolClick={handleSymbolClick}
           pendingCode={pendingCode}
+          expandedCode={expandedCode}
+          historyByCode={historyByCode}
+          historyLoading={pendingCode}
+          historyErrors={historyErrors}
           showSort
         />
       </div>
@@ -156,20 +159,13 @@ const Top100 = () => {
         onClose={closeBuyOptions}
         symbols={buyOptions}
         isVip={isVip}
-        onSymbolClick={handleBuyOptionClick}
+        onSymbolClick={handleSymbolClick}
         pendingCode={pendingCode}
+        expandedCode={expandedCode}
+        historyByCode={historyByCode}
+        historyLoading={pendingCode}
+        historyErrors={historyErrors}
       />
-
-      {showDetailPanel && (
-        <SignalHistorySheet
-          symbolName={symbolName}
-          signalHistory={signalHistory}
-          totalReturn={totalReturn}
-          isVip={isVip}
-          error={historyError}
-          onClose={() => setShowDetailPanel(false)}
-        />
-      )}
     </div>
   );
 };

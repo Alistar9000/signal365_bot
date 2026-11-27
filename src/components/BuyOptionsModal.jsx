@@ -15,6 +15,10 @@ export default function BuyOptionsModal({
   isVip = false,
   onSymbolClick,
   pendingCode = null,
+  expandedCode = null,
+  historyByCode = {},
+  historyLoading = null,
+  historyErrors = {},
 }) {
   const [leaving, setLeaving] = useState(false);
   const isLeaving = leaving && !open;
@@ -110,6 +114,10 @@ export default function BuyOptionsModal({
                 isVip={isVip}
                 onSymbolClick={onSymbolClick}
                 pendingCode={pendingCode}
+                expandedCode={expandedCode}
+                historyByCode={historyByCode}
+                historyLoading={historyLoading}
+                historyErrors={historyErrors}
               />
             </div>
           ) : (

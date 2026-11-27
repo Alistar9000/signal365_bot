@@ -173,7 +173,7 @@ const SignalDateLine = ({ lastSignal }) => {
 };
 
 // Compact inline history shown by expanding a watchlist row.
-const SignalHistoryCollapse = ({ data, loading, status }) => {
+const SignalHistoryCollapse = ({ data, loading, status,name }) => {
   if (loading) {
     return (
       <div className="flex items-center gap-2 px-3.5 py-2.5 text-[10px] text-muted">
@@ -192,8 +192,9 @@ const SignalHistoryCollapse = ({ data, loading, status }) => {
 
   return (
     <div className="border-t border-slate-100 bg-slate-50/70 px-3.5 py-2">
-      <p className="mb-1.5 text-[9px] font-extrabold text-muted">
-        سابقه سیگنالها
+      <p className="mb-1.5 flex items-center gap-1 text-[9px] font-extrabold text-muted">
+        سابقه سیگنالهای
+        <span className="text-emerald-600">{name}</span>
       </p>
       {history.length ? (
         <div className="max-h-32 space-y-1 overflow-y-auto overscroll-contain">
@@ -860,6 +861,7 @@ const Alarms = () => {
                           data={historyByCode[symbol.code]}
                           loading={historyLoading === symbol.code}
                           status={symbol.last_signal?.status}
+                          name={symbol.name}
                         />
                       </div>
                     </div>
